@@ -1,0 +1,60 @@
+import { useState, useEffect } from "react";
+import type { User } from "@stream-io/video-react-sdk";
+import { fetchUser } from "../Endpoints/FetchUser";
+
+interface UseUserReturn {
+  user: User | null;
+  token: string | null;
+  callId: string | null;
+  apiKey: string | null;
+  error: Error | null;
+  isLoading: boolean;
+}
+
+export function useUser(): UseUserReturn {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [callId, setCallId] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const getUser = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const data = await fetchUser();
+
+        const streamUser: User = {
+          id: data.id,
+          name: data.name || "Unknown",
+          image: data.image,
+          type: "authenticated",
+        };
+
+        setUser(streamUser);
+        setToken(data.token);
+        setCallId(data.callId);
+        setApiKey(data.apiKey);
+
+        console.log("useUser: Loaded user", {
+          from: window.location.search ? "URL" : "Backend",
+          user: streamUser,
+          callId: data.callId
+        });
+
+      } catch (err: any) {
+        console.error("useUser error:", err);
+        setError(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    getUser();
+  }, []);
+
+  return { user, token, callId, apiKey, error, isLoading };
+}
