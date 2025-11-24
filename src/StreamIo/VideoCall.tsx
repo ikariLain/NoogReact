@@ -1,19 +1,49 @@
 import "@stream-io/video-react-sdk/dist/css/styles.css";
 import { useEffect, useState } from 'react';
-import {
+import  {
   StreamVideo,
   StreamVideoClient,
   StreamCall,
   StreamTheme,
   SpeakerLayout,
   CallControls,
+  Call
 } from '@stream-io/video-react-sdk';
 import { useUser } from '../Service/useUser';
+import { SendRecordingUrl } from "../Endpoints/RecordingEndpoint";
+
+
+
+
 
 export default function VideoCall() {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<any>(null);
   const { user, token, callId, apiKey, error, isLoading } = useUser();
+
+  async function waitForRecordingUrl(streamCall: Call, previousUrl?: string, timeout = 20000, interval = 2000) {
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < timeout) {
+    const response = await streamCall.queryRecordings();
+
+    if (response.recordings && response.recordings.length > 0) {
+      const latest = response.recordings[response.recordings.length - 1];
+
+      // Om vi inte har en tidigare URL, returnera den första vi hittar
+      // Annars, returnera bara om det är en ny inspelning
+      if (latest.url && latest.url !== previousUrl) {
+        return latest.url;
+      }
+    }
+
+    console.log("⏳ Waiting for new recording URL...");
+    await new Promise(resolve => setTimeout(resolve, interval));
+  }
+
+  throw new Error("No new recording URL found within timeout");
+}
+
 
   useEffect(() => {
 
@@ -39,16 +69,17 @@ export default function VideoCall() {
         streamCall.on('call.recording_stopped', async () => {
           console.log("🛑 Recording stopped");
 
-          // ✅ Nytt sätt: hämta recordings via API
-          const response = await streamCall.queryRecordings();
+         try {
+            // 🔥 Vänta tills Stream har bearbetat inspelningen
+            const recordingUrl = await waitForRecordingUrl(streamCall);
 
-          if (response.recordings && response.recordings.length > 0) {
-            const latest = response.recordings[response.recordings.length - 1];
-            console.log("✅ Recording URL:", latest.url);
-            alert(`Recording available at: ${latest.url}`);
+            console.log("✅ Final Recording URL:", recordingUrl);
 
-          } else {
-            console.warn("No recordings found for this call.");
+            // 🔥 Skicka till ditt .NET Orchestrate API
+            await SendRecordingUrl(recordingUrl, callId);
+
+          } catch (error) {
+            console.error("❌ Failed to get recording URL:", error);
           }
         });
       })
@@ -59,11 +90,11 @@ export default function VideoCall() {
     };
   }, [user, token, callId, apiKey, isLoading]);
 
-  if (isLoading) 
+  if (isLoading)
     return <p>Loading user...</p>;
-  if (error) 
+  if (error)
     return <p>Error loading call: {error.message}</p>
-  if (!client || !call) 
+  if (!client || !call)
     return <p>Initializing call...</p>;
 
   return (
@@ -77,3 +108,4 @@ export default function VideoCall() {
     </StreamVideo>
   );
 }
+
