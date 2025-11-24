@@ -1,4 +1,4 @@
-import { apilink } from "../Api_Links";
+import { deployed_apiLink } from "../Api_Links";
 
 export async function SendRecordingUrl(
   audioUrl: string,
@@ -20,7 +20,7 @@ export async function SendRecordingUrl(
     console.log("Value of projectGroupId:", projectGroupId);
 
 
-    const response = await fetch(`${apilink}/api/Orchestrate`, {
+    const response = await fetch(`${deployed_apiLink}/api/Orchestrate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
