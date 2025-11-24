@@ -1,5 +1,5 @@
 import "@stream-io/video-react-sdk/dist/css/styles.css";
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -7,18 +7,48 @@ import {
   StreamTheme,
   SpeakerLayout,
   CallControls,
+  Call
 } from '@stream-io/video-react-sdk';
 import { useUser } from '../Service/useUser';
+import { SendRecordingUrl } from "../Endpoints/RecordingEndpoint";
+
+async function waitForNewRecording(streamCall: Call, timeout = 60000, interval = 2000): Promise<string> {
+  const startTime = Date.now();
+  const initial = await streamCall.queryRecordings();
+  const initialCount = initial.recordings?.length ?? 0;
+  console.log(`Initial recordings: ${initialCount}`);
+
+  while (Date.now() - startTime < timeout) {
+    const response = await streamCall.queryRecordings();
+    const count = response.recordings?.length ?? 0;
+
+    if (count > initialCount && response.recordings) {
+      // Sortera på start_time
+      const sorted = [...response.recordings].sort(
+        (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      );
+      const latest = sorted[sorted.length - 1];
+
+      if (latest.url) {
+        console.log("Recording is ready:", latest.url);
+        return latest.url;
+      }
+      console.log("Recording detected but URL not ready yet...");
+    }
+    await new Promise(res => setTimeout(res, interval));
+  }
+  throw new Error("No new processed recording found within timeout");
+}
 
 export default function VideoCall() {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
-  const [call, setCall] = useState<any>(null);
+  const [call, setCall] = useState<Call | null>(null);
   const { user, token, callId, apiKey, error, isLoading } = useUser();
+  const recordingStartTimeRef = useRef<string | null>(null);
 
   useEffect(() => {
-
     if (!user || !token || !callId || !apiKey) {
-      console.error("No user, token, callId or apiKey available:", { user, token, callId, apiKey });
+      console.error("No user, token, callId or apiKey available");
       return;
     }
 
@@ -31,24 +61,14 @@ export default function VideoCall() {
         setCall(streamCall);
         setClient(streamClient);
 
-        // Lyssna på recording-events
-        streamCall.on('call.recording_started', () => {
-          console.log("🎥 Recording started");
-        });
-
+        // Event listener för när recording stoppas
         streamCall.on('call.recording_stopped', async () => {
-          console.log("🛑 Recording stopped");
-
-          // ✅ Nytt sätt: hämta recordings via API
-          const response = await streamCall.queryRecordings();
-
-          if (response.recordings && response.recordings.length > 0) {
-            const latest = response.recordings[response.recordings.length - 1];
-            console.log("✅ Recording URL:", latest.url);
-            alert(`Recording available at: ${latest.url}`);
-
-          } else {
-            console.warn("No recordings found for this call.");
+          console.log("Recording stopped, waiting for ready recording...");
+          try {
+            const url = await waitForNewRecording(streamCall, 120000, 4000); // 2 min timeout
+            await SendRecordingUrl(url, callId);
+          } catch (err) {
+            console.error("Failed to get processed recording:", err);
           }
         });
       })
@@ -59,12 +79,9 @@ export default function VideoCall() {
     };
   }, [user, token, callId, apiKey, isLoading]);
 
-  if (isLoading) 
-    return <p>Loading user...</p>;
-  if (error) 
-    return <p>Error loading call: {error.message}</p>
-  if (!client || !call) 
-    return <p>Initializing call...</p>;
+  if (isLoading) return <p>Loading user...</p>;
+  if (error) return <p>Error loading call: {error.message}</p>;
+  if (!client || !call) return <p>Initializing call...</p>;
 
   return (
     <StreamVideo client={client}>

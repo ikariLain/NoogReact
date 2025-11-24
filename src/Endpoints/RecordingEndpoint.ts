@@ -1,20 +1,43 @@
 import { apilink } from "../Api_Links";
 
-export async function SendRecordingUrl(url: string) {
+export async function SendRecordingUrl(
+  audioUrl: string,
+  projectGroupId: string,
+  language?: string
+) {
   try {
-    const response = await fetch(`${apilink}/recording`, {
+    // Bygg JSON-body
+    const body = {
+      audioUrl,
+      projectGroupId,
+      language: language ?? "swedish",
+    };
+
+    console.log("📤 Sending recording via POST body...");
+    console.log("📦 JSON body to send:", JSON.stringify(body));
+
+    console.log("Type of projectGroupId:", typeof projectGroupId);
+    console.log("Value of projectGroupId:", projectGroupId);
+
+
+    const response = await fetch(`${apilink}/api/Orchestrate`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ recordingUrl: url }),
+      body: JSON.stringify(body),
     });
 
+    console.log("⏳ Request sent, waiting for response...");
+
     if (!response.ok) {
-      throw new Error(`Failed to send recording URL: ${response.status}`);
+      console.error("❌ Backend returned status:", response.status);
+      throw new Error(`Failed: ${response.status}`);
     }
 
-    console.log("✅ Recording URL sent successfully");
+    const data = await response.json();
+    console.log("✅ Response from backend:", data);
+    return data;
   } catch (error) {
     console.error("❌ Error sending recording URL:", error);
   }

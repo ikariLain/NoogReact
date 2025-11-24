@@ -22,7 +22,7 @@ export async function fetchUser(timeoutMs = 3000): Promise<UserResponse> {
         id: userIdFromUrl,
         token: tokenFromUrl,
         callId: callIdFromUrl,
-        apiKey: import.meta.env.VITE_STREAM_API_KEY || "naaaah ",
+        apiKey: import.meta.env.VITE_STREAM_API_KEY || "api missing ",
         name: nameFromUrl || "Guest User",
         image: imageFromUrl || undefined
       };
