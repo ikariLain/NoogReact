@@ -1,5 +1,5 @@
 import "@stream-io/video-react-sdk/dist/css/styles.css";
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   StreamVideo,
   StreamVideoClient,
@@ -44,7 +44,7 @@ export default function VideoCall() {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const { user, token, callId, apiKey, error, isLoading } = useUser();
-  const recordingStartTimeRef = useRef<string | null>(null);
+  //const recordingStartTimeRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user || !token || !callId || !apiKey) {
