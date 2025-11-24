@@ -1,5 +1,5 @@
 import type { UserResponse } from "../Models/UserResponse";
-import { apilink } from "../Api_Links";
+import { deployed_apiLink } from "../Api_Links";
 
 export async function fetchUser(timeoutMs = 3000): Promise<UserResponse> {
   const controller = new AbortController();
@@ -34,7 +34,7 @@ export async function fetchUser(timeoutMs = 3000): Promise<UserResponse> {
     }
 
     const response = await fetch(
-      `${apilink}/api/calls/${callIdFromUrl}/join`, // Din backend endpoint som genererar token
+      `${deployed_apiLink}/api/calls/${callIdFromUrl}/join`, // Din backend endpoint som genererar token
       {
         method: "POST",
         headers: {
