@@ -30,8 +30,7 @@ export function CallUI() {
   //TODO: add furtur styling and logic to UI
 
   return (
-    <div className="flex flex-col items-center justify-center gap-4 p-6 text-white h-screen item-align-bottom"
-        style={{ background: "linear-gradient(135deg,  #764ba2 0%, #2941ff 100%)" }}>
+    <div className="flex flex-col items-center justify-center gap-4 p-6 bg-gray-900 text-white h-screen item-align-bottom">
       <h2 className="text-xl font-bold mb-2">Custom Call UI</h2>
 
       {(
